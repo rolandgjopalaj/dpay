@@ -4,7 +4,7 @@ import { Layout, Button } from "antd";
 import './App.css'
 import logo from "./assets/logo.png";
 import CurrentBalance from "./components/CurrentBalance";
-//import RequestAndPay from "./componets/RequestAndPay";
+import RequestAndPay from "./components/RequestAndPay";
 import AccountDetails from "./components/AccountDetails";
 import RecentActivity from "./components/RecentActivity";
 
@@ -97,7 +97,7 @@ function App() {
               <div className="firstColumn">
                 <CurrentBalance dollars={dollars} />
                 
-                
+                <RequestAndPay requests={requests} getNameAndBalance={getNameAndBalance}/>
                 
                 <AccountDetails
                   address={address}
