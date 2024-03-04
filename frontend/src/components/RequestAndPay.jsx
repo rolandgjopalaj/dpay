@@ -52,15 +52,12 @@ function RequestAndPay({ requests, getNameAndBalance }) {
   const { isLoading: isConfirmingPay, isSuccess: isConfirmedPay } = useWaitForTransactionReceipt({ hashPay, }) 
 
   async function payRequest() { 
-    console.log(String(Number(1)))
     writeContractPay({
       address: '0xAC002d53FFE64cc00b8CE9d237E2FF91085560cc',
       abi: ABI,
       functionName: 'payRequest',
       args: [0],
-      overrides: {
-        value: String(Number(1)),
-      },
+      value: String(Number(requests["1"][0] * 1e18)),
     })
   }
 
