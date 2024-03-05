@@ -2,16 +2,16 @@ import React, { useState, useEffect } from "react";
 import { DollarOutlined, SwapOutlined } from "@ant-design/icons";
 import { Modal, Input, InputNumber } from "antd";
 
-import { useSimulateContract, useWriteContract, useWaitForTransactionReceipt } from  "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt } from  "wagmi";
 
-import { polygonMumbai } from 'wagmi/chains'
 import ABI from "../abi.json";
 
-function RequestAndPay({ requests, getNameAndBalance }) {
+function RequestAndPay({ contract, requests, getNameAndBalance }) {
 
   const [payModal, setPayModal] = useState(false);
   const [requestModal, setRequestModal] = useState(false);
-  const [requestAmount, setRequestAmount] = useState(5);
+  const [confirmingModal, setConfirmingModal] = useState(false);
+  const [requestAmount, setRequestAmount] = useState(1);
   const [requestAddress, setRequestAddress] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
 
@@ -30,16 +30,13 @@ function RequestAndPay({ requests, getNameAndBalance }) {
     setRequestModal(false);
   };
 
-  useEffect(()=>{
-  },[])
-
   const { data: hash, writeContract } = useWriteContract() 
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash, }) 
 
   async function createPaymentRequest() { 
     writeContract({
-      address: '0xAC002d53FFE64cc00b8CE9d237E2FF91085560cc',
+      address: contract,
       abi: ABI,
       functionName: 'createRequest',
       args: [requestAddress, requestAmount, requestMessage],
@@ -53,13 +50,28 @@ function RequestAndPay({ requests, getNameAndBalance }) {
 
   async function payRequest() { 
     writeContractPay({
-      address: '0xAC002d53FFE64cc00b8CE9d237E2FF91085560cc',
+      address: contract,
       abi: ABI,
       functionName: 'payRequest',
       args: [0],
-      value: String(Number(requests["1"][0] * 1e18)),
+      value: String(Number(parseInt(requests["1"][0]) * 1e18)),
     })
   }
+
+  useEffect(()=>{
+    if(isConfirming || isConfirmingPay){
+      setConfirmingModal(true);
+      hideRequestModal();
+      hidePayModal();
+    }
+  },[isConfirming, isConfirmingPay])
+
+  useEffect(()=>{
+    if(isConfirmed || isConfirmedPay){
+      //getNameAndBalance();
+      setConfirmingModal(false);
+    }
+  },[isConfirmed, isConfirmedPay])
 
 
     return (
@@ -69,16 +81,15 @@ function RequestAndPay({ requests, getNameAndBalance }) {
           open={payModal}
           onOk={() => {
             payRequest()
-            hidePayModal();
           }}
-          onCancel={hidePayModal}
+          onCancel={()=>{hidePayModal(); getNameAndBalance();}}
           okText="Proceed To Pay"
           cancelText="Cancel"
         >
           {requests && requests["0"].length > 0 && (
             <>
               <h2>Sending payment to {requests["3"][0]}</h2>
-              <h3>Value: {requests["1"][0]} Matic</h3>
+              <h3>Value: {parseInt(requests["1"][0])} Matic</h3>
               <p>"{requests["2"][0]}"</p>
             </>
           )}
@@ -88,7 +99,6 @@ function RequestAndPay({ requests, getNameAndBalance }) {
           open={requestModal}
           onOk={() => {
             createPaymentRequest();
-            hideRequestModal();
           }}
           onCancel={hideRequestModal}
           okText="Proceed To Request"
@@ -124,6 +134,15 @@ function RequestAndPay({ requests, getNameAndBalance }) {
             Request
           </div>
         </div>
+
+
+        <Modal
+          title="Transaction is confirming ..."
+          open={confirmingModal}
+          cancelButtonProps={{ style: { display: 'none' } }}
+          okButtonProps={{ style: { display: 'none' } }}
+        ></Modal>
+
         </>
     );
 }

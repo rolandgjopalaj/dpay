@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { Layout, Button } from "antd";
 import './App.css'
 import logo from "./assets/logo.png";
@@ -7,8 +6,11 @@ import CurrentBalance from "./components/CurrentBalance";
 import RequestAndPay from "./components/RequestAndPay";
 import AccountDetails from "./components/AccountDetails";
 import RecentActivity from "./components/RecentActivity";
+import ABI from "./abi.json";
 
-import { useAccount, useDisconnect, useEnsAvatar, useEnsName, useConnect } from 'wagmi'
+const contract = '0xC1415aC3C869eCE78d4077825c36D7Bb9ff383CD';
+
+import { useAccount, useDisconnect, useConnect, useReadContract, useBalance } from 'wagmi'
 
 const { Header, Content } = Layout;
 
@@ -16,8 +18,6 @@ function App() {
   const { address } = useAccount()
   const { isConnected } = useAccount() 
   const { disconnect } = useDisconnect()
-  const { data: ensName } = useEnsName({ address })
-  //const { data: ensAvatar } = useEnsAvatar({ name: ensName! })
 
   const { connectors, connect } = useConnect()
   const [connector] = useState(connectors[1])
@@ -26,7 +26,7 @@ function App() {
   const [balance, setBalance] = useState("...");
   const [dollars, setDollars] = useState("...");
   const [history, setHistory] = useState(null);
-  const [requests, setRequests] = useState({ "1": [0], "0": [] });
+  const [requests, setRequests] = useState();
 
   function disconnectAndSetNull() {
     disconnect();
@@ -37,27 +37,60 @@ function App() {
     setRequests({ "1": [0], "0": [] });
   }
 
+  function systematic(arr) {
+    const dataArray = arr.map((transaction, index) => ({
+      key: (arr.length + 1 - index).toString(),
+      type: transaction.action,
+      amount: parseInt(transaction.amount),
+      message: transaction.message,
+      address: transaction.otherPartyAddress,
+      subject: transaction.otherPartyName,
+    }));
+  
+    return dataArray.reverse();
+}
+
+  const resultName =  useReadContract({
+    abi: ABI,
+    address: contract,
+    functionName: 'getMyName',
+    args: [String(address)],
+  })
+
+  const resultHistory =  useReadContract({
+    abi: ABI,
+    address: contract,
+    functionName: 'getMyHistory',
+    args: [String(address)],
+  })
+
+  const resultRequests = useReadContract({
+    abi: ABI,
+    address: contract,
+    functionName: 'getMyRequests',
+    args: [String(address)],
+  })
+
+  const getBalance = useBalance({
+    address: String(address),
+    token: '0x0000000000000000000000000000000000001010', 
+  })
+
   async function getNameAndBalance() {
-    const res = await axios.get(`http://localhost:3001/getNameAndBalance`, {
-      params: { userAddress: address },
-    });
 
-    const response = res.data;
-    console.log(response.requests);
-    if (response.name[1]) {
-      setName(response.name[0]);
-    }
-    setBalance(String(response.balance));
-    setDollars(String(response.dollars));
-    setHistory(response.history);
-    setRequests(response.requests);
-    
+    await setName(resultName.data.name)
+    await setHistory(systematic(resultHistory.data))
+    await setRequests(resultRequests.data)
+    await setBalance(Number(Number(getBalance.data.value)/1e18).toFixed(2))
+    await setDollars(Number(Number(getBalance.data.value)/1e18).toFixed(2)) // to multiplie matic token price
+
   }
-
+  
   useEffect(() => {
-    if (!isConnected) return;
-    getNameAndBalance();
-  }, [isConnected]);
+    if(resultName.isSuccess){
+      getNameAndBalance()
+    }
+  }, [resultName.isSuccess]);
 
 
   return (
@@ -97,7 +130,7 @@ function App() {
               <div className="firstColumn">
                 <CurrentBalance dollars={dollars} />
                 
-                <RequestAndPay requests={requests} getNameAndBalance={getNameAndBalance}/>
+                <RequestAndPay contract={contract} requests={requests} getNameAndBalance={getNameAndBalance}/>
                 
                 <AccountDetails
                   address={address}
