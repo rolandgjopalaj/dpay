@@ -8,13 +8,16 @@ import { WagmiProvider, http, createConfig } from 'wagmi'
 import { polygonMumbai } from 'wagmi/chains'
 import { metaMask } from 'wagmi/connectors'
 
+import dotenv from 'dotenv'
+dotenv.config();
+
 const config = createConfig({
   chains: [polygonMumbai],
   connectors: [
     metaMask(),
   ],
   transports: {
-    [polygonMumbai.id]: http("https://polygon-mumbai.g.alchemy.com/v2/L3VKKXeMAyAIKDIH60v46gDcYShnVkbo"),
+    [polygonMumbai.id]: http(process.env.HTTP_API),
   },
 })
 
