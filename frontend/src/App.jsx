@@ -10,7 +10,7 @@ import ABI from "./abi.json";
 
 const contract = '0xC1415aC3C869eCE78d4077825c36D7Bb9ff383CD';
 
-import { useAccount, useDisconnect, useConnect, useReadContract, useBalance } from 'wagmi'
+import { useAccountEffect, useAccount, useDisconnect, useConnect, useReadContract, useBalance } from 'wagmi'
 
 const { Header, Content } = Layout;
 
@@ -18,6 +18,16 @@ function App() {
   const { address } = useAccount()
   const { isConnected } = useAccount() 
   const { disconnect } = useDisconnect()
+
+  useAccountEffect({ 
+    onConnect(data) {
+      console.log('connected', data)
+    },
+    onDisconnect() {
+      console.log('disconnected')
+      disconnectAndSetNull()
+    },
+  })
 
   const { connectors, connect } = useConnect()
   const [connector] = useState(connectors[1])
@@ -29,7 +39,7 @@ function App() {
   const [requests, setRequests] = useState();
 
   function disconnectAndSetNull() {
-    disconnect();
+    //disconnect();
     setName("...");
     setBalance("...");
     setDollars("...");
@@ -115,7 +125,7 @@ function App() {
             )}
           </div>
           {isConnected ? (
-            <Button type={"primary"} onClick={disconnectAndSetNull}>
+            <Button type={"primary"} onClick={()=>disconnect()}>
               Disconnect Wallet
             </Button>
           ) : (
@@ -136,6 +146,7 @@ function App() {
                   address={address}
                   name={name}
                   balance={balance}
+                  contract={contract}
                 />
               </div>
               <div className="secondColumn">
